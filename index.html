@@ -2,12 +2,35 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>3D Rubik's Cube (Mouse Control)</title>
+<title>Rubik's Cube Color Selector</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
+
+  #ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+  }
+
+  button {
+    display: block;
+    margin: 5px;
+    padding: 10px;
+    font-weight: bold;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
+
+<div id="ui">
+  <button onclick="goToFace('white')" style="background:white;">White</button>
+  <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
+  <button onclick="goToFace('green')" style="background:green;">Green</button>
+  <button onclick="goToFace('blue')" style="background:blue; color:white;">Blue</button>
+  <button onclick="goToFace('red')" style="background:red;">Red</button>
+  <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 
@@ -15,15 +38,8 @@
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth/window.innerHeight,
-  0.1,
-  1000
-);
-
-camera.position.set(0, 0, 7);
-camera.lookAt(0, 0, 0);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0,0,7);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -50,7 +66,7 @@ const COLORS = {
   black: 0x111111
 };
 
-// CREATE MINI CUBES
+// CREATE CUBES
 function createCube(x, y, z) {
   const materials = [
     new THREE.MeshStandardMaterial({ color: x === 1 ? COLORS.red : COLORS.black }),
@@ -61,63 +77,68 @@ function createCube(x, y, z) {
     new THREE.MeshStandardMaterial({ color: z === -1 ? COLORS.blue : COLORS.black })
   ];
 
-  const geometry = new THREE.BoxGeometry(0.95, 0.95, 0.95);
-  const cube = new THREE.Mesh(geometry, materials);
-
-  cube.position.set(x, y, z);
+  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.95,0.95,0.95), materials);
+  cube.position.set(x,y,z);
   cubeGroup.add(cube);
 }
 
-// BUILD CUBE
-for (let x = -1; x <= 1; x++) {
-  for (let y = -1; y <= 1; y++) {
-    for (let z = -1; z <= 1; z++) {
-      createCube(x, y, z);
+// BUILD
+for (let x=-1;x<=1;x++){
+  for (let y=-1;y<=1;y++){
+    for (let z=-1;z<=1;z++){
+      createCube(x,y,z);
     }
   }
 }
 
-// 🖱️ MOUSE CONTROLS
+// 🖱️ DRAG ROTATION
 let isDragging = false;
-let previousMousePosition = { x: 0, y: 0 };
+let prev = {x:0,y:0};
 
-document.addEventListener('mousedown', (e) => {
-  isDragging = true;
+document.addEventListener('mousedown',()=>isDragging=true);
+document.addEventListener('mouseup',()=>isDragging=false);
+
+document.addEventListener('mousemove',(e)=>{
+  if(!isDragging) return;
+
+  let dx = e.offsetX - prev.x;
+  let dy = e.offsetY - prev.y;
+
+  cubeGroup.rotation.y += dx * 0.01;
+  cubeGroup.rotation.x += dy * 0.01;
+
+  prev = {x:e.offsetX,y:e.offsetY};
 });
 
-document.addEventListener('mouseup', () => {
-  isDragging = false;
-});
+// 🎯 TARGET ROTATION (for buttons)
+let targetRotation = { x: 0, y: 0 };
 
-document.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
+// FACE VIEW POSITIONS
+function goToFace(color){
+  if(color==="white") targetRotation = {x: -Math.PI/2, y: 0};
+  if(color==="yellow") targetRotation = {x: Math.PI/2, y: 0};
+  if(color==="green") targetRotation = {x: 0, y: 0};
+  if(color==="blue") targetRotation = {x: 0, y: Math.PI};
+  if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
+  if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
+}
 
-  const deltaMove = {
-    x: e.offsetX - previousMousePosition.x,
-    y: e.offsetY - previousMousePosition.y
-  };
-
-  cubeGroup.rotation.y += deltaMove.x * 0.01;
-  cubeGroup.rotation.x += deltaMove.y * 0.01;
-
-  previousMousePosition = {
-    x: e.offsetX,
-    y: e.offsetY
-  };
-});
-
-// RENDER LOOP (no auto spin)
-function animate() {
+// SMOOTH ROTATION
+function animate(){
   requestAnimationFrame(animate);
-  renderer.render(scene, camera);
+
+  cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
+  cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
+
+  renderer.render(scene,camera);
 }
 animate();
 
 // RESIZE
-window.addEventListener("resize", () => {
+window.addEventListener("resize",()=>{
   camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(window.innerWidth,window.innerHeight);
 });
 </script>
 
