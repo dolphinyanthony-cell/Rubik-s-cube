@@ -2,171 +2,102 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube Simulator</title>
+<title>3D Rubik's Cube</title>
 <style>
-  body {
-    background: #111;
+  body { margin: 0; overflow: hidden; background: black; }
+  #info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
     color: white;
-    text-align: center;
     font-family: Arial;
-  }
-
-  canvas {
-    background: #222;
-    margin-top: 20px;
-  }
-
-  button {
-    margin: 5px;
-    padding: 10px;
-    font-size: 16px;
-    cursor: pointer;
   }
 </style>
 </head>
 <body>
 
-<h1>Rubik's Cube Simulator</h1>
-
-<canvas id="cubeCanvas" width="400" height="400"></canvas>
-
-<div>
-  <button onclick="rotate('U')">U</button>
-  <button onclick="rotate('D')">D</button>
-  <button onclick="rotate('L')">L</button>
-  <button onclick="rotate('R')">R</button>
-  <button onclick="rotate('F')">F</button>
-  <button onclick="rotate('B')">B</button>
-  <br>
-  <button onclick="scramble()">Scramble</button>
-  <button onclick="resetCube()">Reset</button>
+<div id="info">
+  Drag to rotate view<br>
+  Scroll to zoom
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152/examples/js/controls/OrbitControls.js"></script>
+
 <script>
-const canvas = document.getElementById("cubeCanvas");
-const ctx = canvas.getContext("2d");
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 
-const colors = {
-  W: "#fff",
-  Y: "#ff0",
-  R: "#f00",
-  O: "#f80",
-  G: "#0f0",
-  B: "#00f"
-};
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-// Cube faces
-let cube = {
-  U: Array(9).fill("W"),
-  D: Array(9).fill("Y"),
-  F: Array(9).fill("G"),
-  B: Array(9).fill("B"),
-  L: Array(9).fill("O"),
-  R: Array(9).fill("R")
-};
+// Controls (mouse rotate)
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-function drawFace(face, x, y) {
-  for (let i = 0; i < 9; i++) {
-    let row = Math.floor(i / 3);
-    let col = i % 3;
-    ctx.fillStyle = colors[face[i]];
-    ctx.fillRect(x + col * 20, y + row * 20, 18, 18);
+// Lighting
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5, 5, 5);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+// Colors
+const faceColors = [
+  0xffffff, // white
+  0xffff00, // yellow
+  0x00ff00, // green
+  0x0000ff, // blue
+  0xff8000, // orange
+  0xff0000  // red
+];
+
+// Create mini cubes
+const cubes = [];
+const size = 1;
+
+for (let x = -1; x <= 1; x++) {
+  for (let y = -1; y <= 1; y++) {
+    for (let z = -1; z <= 1; z++) {
+
+      const geometry = new THREE.BoxGeometry(size, size, size);
+
+      const materials = [
+        new THREE.MeshStandardMaterial({ color: faceColors[5] }), // right
+        new THREE.MeshStandardMaterial({ color: faceColors[4] }), // left
+        new THREE.MeshStandardMaterial({ color: faceColors[0] }), // top
+        new THREE.MeshStandardMaterial({ color: faceColors[1] }), // bottom
+        new THREE.MeshStandardMaterial({ color: faceColors[2] }), // front
+        new THREE.MeshStandardMaterial({ color: faceColors[3] })  // back
+      ];
+
+      const cube = new THREE.Mesh(geometry, materials);
+
+      cube.position.set(x * 1.05, y * 1.05, z * 1.05);
+
+      scene.add(cube);
+      cubes.push(cube);
+    }
   }
 }
 
-function drawCube() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Camera position
+camera.position.z = 6;
 
-  drawFace(cube.U, 140, 20);
-  drawFace(cube.L, 80, 80);
-  drawFace(cube.F, 140, 80);
-  drawFace(cube.R, 200, 80);
-  drawFace(cube.B, 260, 80);
-  drawFace(cube.D, 140, 140);
+// Animate
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
 }
+animate();
 
-function rotateFace(face) {
-  return [
-    face[6], face[3], face[0],
-    face[7], face[4], face[1],
-    face[8], face[5], face[2]
-  ];
-}
-
-function rotate(move) {
-  let c = cube;
-
-  if (move === "U") {
-    c.U = rotateFace(c.U);
-    [c.F[0],c.F[1],c.F[2],c.R[0],c.R[1],c.R[2],c.B[0],c.B[1],c.B[2],c.L[0],c.L[1],c.L[2]] =
-    [c.R[0],c.R[1],c.R[2],c.B[0],c.B[1],c.B[2],c.L[0],c.L[1],c.L[2],c.F[0],c.F[1],c.F[2]];
-  }
-
-  if (move === "D") {
-    c.D = rotateFace(c.D);
-    [c.F[6],c.F[7],c.F[8],c.L[6],c.L[7],c.L[8],c.B[6],c.B[7],c.B[8],c.R[6],c.R[7],c.R[8]] =
-    [c.L[6],c.L[7],c.L[8],c.B[6],c.B[7],c.B[8],c.R[6],c.R[7],c.R[8],c.F[6],c.F[7],c.F[8]];
-  }
-
-  if (move === "F") {
-    c.F = rotateFace(c.F);
-    let temp = [c.U[6],c.U[7],c.U[8]];
-    [c.U[6],c.U[7],c.U[8]] = [c.L[8],c.L[5],c.L[2]];
-    [c.L[2],c.L[5],c.L[8]] = [c.D[2],c.D[1],c.D[0]];
-    [c.D[0],c.D[1],c.D[2]] = [c.R[6],c.R[3],c.R[0]];
-    [c.R[0],c.R[3],c.R[6]] = temp;
-  }
-
-  if (move === "B") {
-    c.B = rotateFace(c.B);
-    let temp = [c.U[0],c.U[1],c.U[2]];
-    [c.U[0],c.U[1],c.U[2]] = [c.R[2],c.R[5],c.R[8]];
-    [c.R[2],c.R[5],c.R[8]] = [c.D[8],c.D[7],c.D[6]];
-    [c.D[6],c.D[7],c.D[8]] = [c.L[0],c.L[3],c.L[6]];
-    [c.L[0],c.L[3],c.L[6]] = temp;
-  }
-
-  if (move === "L") {
-    c.L = rotateFace(c.L);
-    let temp = [c.U[0],c.U[3],c.U[6]];
-    [c.U[0],c.U[3],c.U[6]] = [c.B[8],c.B[5],c.B[2]];
-    [c.B[2],c.B[5],c.B[8]] = [c.D[0],c.D[3],c.D[6]];
-    [c.D[0],c.D[3],c.D[6]] = [c.F[0],c.F[3],c.F[6]];
-    [c.F[0],c.F[3],c.F[6]] = temp;
-  }
-
-  if (move === "R") {
-    c.R = rotateFace(c.R);
-    let temp = [c.U[2],c.U[5],c.U[8]];
-    [c.U[2],c.U[5],c.U[8]] = [c.F[2],c.F[5],c.F[8]];
-    [c.F[2],c.F[5],c.F[8]] = [c.D[2],c.D[5],c.D[8]];
-    [c.D[2],c.D[5],c.D[8]] = [c.B[6],c.B[3],c.B[0]];
-    [c.B[0],c.B[3],c.B[6]] = temp;
-  }
-
-  drawCube();
-}
-
-function scramble() {
-  const moves = ["U","D","L","R","F","B"];
-  for (let i = 0; i < 20; i++) {
-    rotate(moves[Math.floor(Math.random()*6)]);
-  }
-}
-
-function resetCube() {
-  cube = {
-    U: Array(9).fill("W"),
-    D: Array(9).fill("Y"),
-    F: Array(9).fill("G"),
-    B: Array(9).fill("B"),
-    L: Array(9).fill("O"),
-    R: Array(9).fill("R")
-  };
-  drawCube();
-}
-
-drawCube();
+// Resize fix
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 
 </body>
