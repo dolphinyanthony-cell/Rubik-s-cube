@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Centered 3D Rubik's Cube</title>
+<title>3D Rubik's Cube (Mouse Control)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 </style>
@@ -22,7 +22,6 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 
-// ✅ PERFECT CENTER CAMERA
 camera.position.set(0, 0, 7);
 camera.lookAt(0, 0, 0);
 
@@ -36,7 +35,7 @@ const light = new THREE.PointLight(0xffffff, 1);
 light.position.set(10,10,10);
 scene.add(light);
 
-// GROUP (keeps cube centered)
+// GROUP
 const cubeGroup = new THREE.Group();
 scene.add(cubeGroup);
 
@@ -69,7 +68,7 @@ function createCube(x, y, z) {
   cubeGroup.add(cube);
 }
 
-// BUILD 3x3x3
+// BUILD CUBE
 for (let x = -1; x <= 1; x++) {
   for (let y = -1; y <= 1; y++) {
     for (let z = -1; z <= 1; z++) {
@@ -78,13 +77,38 @@ for (let x = -1; x <= 1; x++) {
   }
 }
 
-// ROTATE THE CUBE (centered spin)
+// 🖱️ MOUSE CONTROLS
+let isDragging = false;
+let previousMousePosition = { x: 0, y: 0 };
+
+document.addEventListener('mousedown', (e) => {
+  isDragging = true;
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+
+  const deltaMove = {
+    x: e.offsetX - previousMousePosition.x,
+    y: e.offsetY - previousMousePosition.y
+  };
+
+  cubeGroup.rotation.y += deltaMove.x * 0.01;
+  cubeGroup.rotation.x += deltaMove.y * 0.01;
+
+  previousMousePosition = {
+    x: e.offsetX,
+    y: e.offsetY
+  };
+});
+
+// RENDER LOOP (no auto spin)
 function animate() {
   requestAnimationFrame(animate);
-
-  cubeGroup.rotation.y += 0.01;
-  cubeGroup.rotation.x += 0.005;
-
   renderer.render(scene, camera);
 }
 animate();
