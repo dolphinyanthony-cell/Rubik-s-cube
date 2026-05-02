@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rubik's Cube Simulator</title>
+<style>
+  body {
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: Arial;
+  }
+
+  canvas {
+    background: #222;
+    margin-top: 20px;
+  }
+
+  button {
+    margin: 5px;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Rubik's Cube Simulator</h1>
+
+<canvas id="cubeCanvas" width="400" height="400"></canvas>
+
+<div>
+  <button onclick="rotate('U')">U</button>
+  <button onclick="rotate('D')">D</button>
+  <button onclick="rotate('L')">L</button>
+  <button onclick="rotate('R')">R</button>
+  <button onclick="rotate('F')">F</button>
+  <button onclick="rotate('B')">B</button>
+  <br>
+  <button onclick="scramble()">Scramble</button>
+  <button onclick="resetCube()">Reset</button>
+</div>
+
+<script>
+const canvas = document.getElementById("cubeCanvas");
+const ctx = canvas.getContext("2d");
+
+const colors = {
+  W: "#fff",
+  Y: "#ff0",
+  R: "#f00",
+  O: "#f80",
+  G: "#0f0",
+  B: "#00f"
+};
+
+// Cube faces
+let cube = {
+  U: Array(9).fill("W"),
+  D: Array(9).fill("Y"),
+  F: Array(9).fill("G"),
+  B: Array(9).fill("B"),
+  L: Array(9).fill("O"),
+  R: Array(9).fill("R")
+};
+
+function drawFace(face, x, y) {
+  for (let i = 0; i < 9; i++) {
+    let row = Math.floor(i / 3);
+    let col = i % 3;
+    ctx.fillStyle = colors[face[i]];
+    ctx.fillRect(x + col * 20, y + row * 20, 18, 18);
+  }
+}
+
+function drawCube() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawFace(cube.U, 140, 20);
+  drawFace(cube.L, 80, 80);
+  drawFace(cube.F, 140, 80);
+  drawFace(cube.R, 200, 80);
+  drawFace(cube.B, 260, 80);
+  drawFace(cube.D, 140, 140);
+}
+
+function rotateFace(face) {
+  return [
+    face[6], face[3], face[0],
+    face[7], face[4], face[1],
+    face[8], face[5], face[2]
+  ];
+}
+
+function rotate(move) {
+  let c = cube;
+
+  if (move === "U") {
+    c.U = rotateFace(c.U);
+    [c.F[0],c.F[1],c.F[2],c.R[0],c.R[1],c.R[2],c.B[0],c.B[1],c.B[2],c.L[0],c.L[1],c.L[2]] =
+    [c.R[0],c.R[1],c.R[2],c.B[0],c.B[1],c.B[2],c.L[0],c.L[1],c.L[2],c.F[0],c.F[1],c.F[2]];
+  }
+
+  if (move === "D") {
+    c.D = rotateFace(c.D);
+    [c.F[6],c.F[7],c.F[8],c.L[6],c.L[7],c.L[8],c.B[6],c.B[7],c.B[8],c.R[6],c.R[7],c.R[8]] =
+    [c.L[6],c.L[7],c.L[8],c.B[6],c.B[7],c.B[8],c.R[6],c.R[7],c.R[8],c.F[6],c.F[7],c.F[8]];
+  }
+
+  if (move === "F") {
+    c.F = rotateFace(c.F);
+    let temp = [c.U[6],c.U[7],c.U[8]];
+    [c.U[6],c.U[7],c.U[8]] = [c.L[8],c.L[5],c.L[2]];
+    [c.L[2],c.L[5],c.L[8]] = [c.D[2],c.D[1],c.D[0]];
+    [c.D[0],c.D[1],c.D[2]] = [c.R[6],c.R[3],c.R[0]];
+    [c.R[0],c.R[3],c.R[6]] = temp;
+  }
+
+  if (move === "B") {
+    c.B = rotateFace(c.B);
+    let temp = [c.U[0],c.U[1],c.U[2]];
+    [c.U[0],c.U[1],c.U[2]] = [c.R[2],c.R[5],c.R[8]];
+    [c.R[2],c.R[5],c.R[8]] = [c.D[8],c.D[7],c.D[6]];
+    [c.D[6],c.D[7],c.D[8]] = [c.L[0],c.L[3],c.L[6]];
+    [c.L[0],c.L[3],c.L[6]] = temp;
+  }
+
+  if (move === "L") {
+    c.L = rotateFace(c.L);
+    let temp = [c.U[0],c.U[3],c.U[6]];
+    [c.U[0],c.U[3],c.U[6]] = [c.B[8],c.B[5],c.B[2]];
+    [c.B[2],c.B[5],c.B[8]] = [c.D[0],c.D[3],c.D[6]];
+    [c.D[0],c.D[3],c.D[6]] = [c.F[0],c.F[3],c.F[6]];
+    [c.F[0],c.F[3],c.F[6]] = temp;
+  }
+
+  if (move === "R") {
+    c.R = rotateFace(c.R);
+    let temp = [c.U[2],c.U[5],c.U[8]];
+    [c.U[2],c.U[5],c.U[8]] = [c.F[2],c.F[5],c.F[8]];
+    [c.F[2],c.F[5],c.F[8]] = [c.D[2],c.D[5],c.D[8]];
+    [c.D[2],c.D[5],c.D[8]] = [c.B[6],c.B[3],c.B[0]];
+    [c.B[0],c.B[3],c.B[6]] = temp;
+  }
+
+  drawCube();
+}
+
+function scramble() {
+  const moves = ["U","D","L","R","F","B"];
+  for (let i = 0; i < 20; i++) {
+    rotate(moves[Math.floor(Math.random()*6)]);
+  }
+}
+
+function resetCube() {
+  cube = {
+    U: Array(9).fill("W"),
+    D: Array(9).fill("Y"),
+    F: Array(9).fill("G"),
+    B: Array(9).fill("B"),
+    L: Array(9).fill("O"),
+    R: Array(9).fill("R")
+  };
+  drawCube();
+}
+
+drawCube();
+</script>
+
+</body>
+</html>
