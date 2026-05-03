@@ -181,7 +181,7 @@ function turn(move){
   }
 }
 
-// SCRAMBLE (SAFE)
+// ⚡ FASTER SCRAMBLE (ONLY CHANGE)
 function scrambleCube(){
   const moves = ["R","R'","L","L'","U","U'","D","D'"];
   let i = 0;
@@ -196,7 +196,7 @@ function scrambleCube(){
       i++;
     }
 
-    requestAnimationFrame(step);
+    setTimeout(step, 30); // ⚡ faster
   }
 
   step();
