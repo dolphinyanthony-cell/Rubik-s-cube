@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (View-Based Moves)</title>
+<title>Rubik's Cube (Camera-Based Moves)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -176,30 +176,38 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// 🔥 VIEW-BASED AXIS
+// ✅ CAMERA-BASED AXIS (REAL FIX)
 function getDynamicAxis(move){
-  const rot = cubeGroup.rotation;
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
 
-  let x = Math.round(Math.sin(rot.y));
-  let z = Math.round(Math.cos(rot.y));
+  const ax = Math.abs(dir.x);
+  const ay = Math.abs(dir.y);
+  const az = Math.abs(dir.z);
 
-  if(move === "F" || move === "F'")
-    return z >= 0 ? {axis:"z", value:1} : {axis:"z", value:-1};
+  // FRONT/BACK
+  if(az >= ax && az >= ay){
+    if(move === "F" || move === "F'")
+      return {axis:"z", value: dir.z < 0 ? 1 : -1};
+    if(move === "B" || move === "B'")
+      return {axis:"z", value: dir.z < 0 ? -1 : 1};
+  }
 
-  if(move === "B" || move === "B'")
-    return z >= 0 ? {axis:"z", value:-1} : {axis:"z", value:1};
+  // RIGHT/LEFT
+  if(ax >= az && ax >= ay){
+    if(move === "R" || move === "R'")
+      return {axis:"x", value: dir.x > 0 ? 1 : -1};
+    if(move === "L" || move === "L'")
+      return {axis:"x", value: dir.x > 0 ? -1 : 1};
+  }
 
-  if(move === "R" || move === "R'")
-    return x >= 0 ? {axis:"x", value:1} : {axis:"x", value:-1};
-
-  if(move === "L" || move === "L'")
-    return x >= 0 ? {axis:"x", value:-1} : {axis:"x", value:1};
-
+  // UP/DOWN
   if(move === "U" || move === "U'")
-    return {axis:"y", value:1};
-
+    return {axis:"y", value: dir.y > 0 ? 1 : -1};
   if(move === "D" || move === "D'")
-    return {axis:"y", value:-1};
+    return {axis:"y", value: dir.y > 0 ? -1 : 1};
+
+  return {axis:"z", value:1};
 }
 
 // MOVES
