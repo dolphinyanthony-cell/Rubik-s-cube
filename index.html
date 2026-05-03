@@ -2,12 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Center-Locked View)</title>
+<title>Rubik's Cube (PRO Simulator)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
   #moves { position: absolute; top: 10px; right: 10px; }
-  #colors { position: absolute; top: 10px; left: 10px; }
   #controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
 
   button {
@@ -19,15 +18,6 @@
 </style>
 </head>
 <body>
-
-<div id="colors">
-  <button onclick="goToFace('white')" style="background:white;">White</button>
-  <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
-  <button onclick="goToFace('green')" style="background:green;">Green</button>
-  <button onclick="goToFace('blue')" style="background:blue; color:white;">Blue</button>
-  <button onclick="goToFace('red')" style="background:red;">Red</button>
-  <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
-</div>
 
 <div id="moves">
   <button onclick="turn('R')">R</button>
@@ -48,7 +38,6 @@
 <div id="controls">
   <button onclick="resetCube()">SOLVE</button>
   <button onclick="scrambleCube()">SCRAMBLE</button>
-  <button onclick="toggleDrag()">DRAG MODE</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -64,38 +53,27 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// LIGHT
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const light = new THREE.PointLight(0xffffff, 1.2);
+scene.add(new THREE.AmbientLight(0xffffff,0.7));
+const light = new THREE.PointLight(0xffffff,1.2);
 light.position.set(10,10,10);
 scene.add(light);
 
-let cubeGroup;
+let cubeGroup = new THREE.Group();
+scene.add(cubeGroup);
+
 let cubes = [];
 let isTurning = false;
 
-// DRAG
-let dragMode = false;
-let isDragging = false;
-let prevMouse = { x: 0, y: 0 };
-
-// COLORS
-const COLORS = {
-  white: 0xffffff,
-  yellow: 0xffff00,
-  green: 0x00ff00,
-  blue: 0x0000ff,
-  orange: 0xff8000,
-  red: 0xff0000,
-  black: 0x111111
+// ORIENTATION BASIS (THIS IS THE KEY)
+let orientation = {
+  x: new THREE.Vector3(1,0,0),
+  y: new THREE.Vector3(0,1,0),
+  z: new THREE.Vector3(0,0,1)
 };
 
 // BUILD
 function buildCube(){
-  if(cubeGroup) scene.remove(cubeGroup);
-
-  cubeGroup = new THREE.Group();
-  scene.add(cubeGroup);
+  cubeGroup.clear();
   cubes = [];
 
   for(let x=-1;x<=1;x++){
@@ -103,12 +81,12 @@ function buildCube(){
       for(let z=-1;z<=1;z++){
 
         const materials = [
-          new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
-          new THREE.MeshStandardMaterial({ color: x===-1?COLORS.orange:COLORS.black }),
-          new THREE.MeshStandardMaterial({ color: y===1?COLORS.white:COLORS.black }),
-          new THREE.MeshStandardMaterial({ color: y===-1?COLORS.yellow:COLORS.black }),
-          new THREE.MeshStandardMaterial({ color: z===1?COLORS.green:COLORS.black }),
-          new THREE.MeshStandardMaterial({ color: z===-1?COLORS.blue:COLORS.black })
+          new THREE.MeshStandardMaterial({color:x===1?0xff0000:0x111111}),
+          new THREE.MeshStandardMaterial({color:x===-1?0xff8000:0x111111}),
+          new THREE.MeshStandardMaterial({color:y===1?0xffffff:0x111111}),
+          new THREE.MeshStandardMaterial({color:y===-1?0xffff00:0x111111}),
+          new THREE.MeshStandardMaterial({color:z===1?0x00ff00:0x111111}),
+          new THREE.MeshStandardMaterial({color:z===-1?0x0000ff:0x111111})
         ];
 
         const cube = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), materials);
@@ -123,21 +101,8 @@ function buildCube(){
 
 buildCube();
 
-// SNAP
-function snapCube(){
-  cubes.forEach(c=>{
-    c.position.x = Math.round(c.position.x / 1.05) * 1.05;
-    c.position.y = Math.round(c.position.y / 1.05) * 1.05;
-    c.position.z = Math.round(c.position.z / 1.05) * 1.05;
-
-    c.rotation.x = Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2);
-    c.rotation.y = Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2);
-    c.rotation.z = Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2);
-  });
-}
-
-// ROTATE
-function rotateLayer(axis, value, dir){
+// ROTATE LAYER (uses orientation)
+function rotateLayer(axisVec, layerValue, dir){
   if(isTurning) return;
   isTurning = true;
 
@@ -145,19 +110,20 @@ function rotateLayer(axis, value, dir){
   cubeGroup.add(group);
 
   cubes.forEach(c=>{
-    if(Math.round(c.position[axis]/1.05) === value){
+    let proj = c.position.clone().dot(axisVec);
+    if(Math.round(proj/1.05) === layerValue){
       group.add(c);
     }
   });
 
-  let angle = dir * Math.PI/2;
   let steps = 0;
+  let angle = dir * Math.PI/2;
 
   function anim(){
     steps++;
-    group.rotation[axis] += angle/20;
+    group.rotateOnAxis(axisVec, angle/20);
 
-    if(steps < 20){
+    if(steps<20){
       requestAnimationFrame(anim);
     } else {
       group.updateMatrixWorld();
@@ -168,7 +134,6 @@ function rotateLayer(axis, value, dir){
       });
 
       cubeGroup.remove(group);
-      snapCube();
       isTurning = false;
     }
   }
@@ -176,67 +141,24 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// 🔥 FIND FRONT CENTER
-function getFrontFace(){
-  const dir = new THREE.Vector3();
-  camera.getWorldDirection(dir);
-
-  let bestDot = -Infinity;
-  let best = null;
-
-  cubes.forEach(c=>{
-    if(Math.abs(c.position.x)+Math.abs(c.position.y)+Math.abs(c.position.z)===1.05){
-      let normal = c.position.clone().normalize();
-      let dot = normal.dot(dir);
-
-      if(dot > bestDot){
-        bestDot = dot;
-        best = normal;
-      }
-    }
-  });
-
-  return best;
-}
-
-// 🔥 AXIS BASED ON FRONT
-function getDynamicAxis(move){
-  const f = getFrontFace();
-
-  const fx = Math.round(f.x);
-  const fy = Math.round(f.y);
-  const fz = Math.round(f.z);
-
-  if(move==="F"||move==="F'") return {axis:"z", value:fz};
-  if(move==="B"||move==="B'") return {axis:"z", value:-fz};
-
-  if(move==="R"||move==="R'"){
-    if(Math.abs(fz)===1) return {axis:"x", value:fz};
-    if(Math.abs(fx)===1) return {axis:"z", value:-fx};
-  }
-
-  if(move==="L"||move==="L'"){
-    if(Math.abs(fz)===1) return {axis:"x", value:-fz};
-    if(Math.abs(fx)===1) return {axis:"z", value:fx};
-  }
-
-  if(move==="U"||move==="U'") return {axis:"y", value:1};
-  if(move==="D"||move==="D'") return {axis:"y", value:-1};
-
-  return {axis:"z", value:1};
-}
-
-// MOVES
+// TURN (REAL MAPPING)
 function turn(move){
   let dir = move.includes("'") ? 1 : -1;
-  let data = getDynamicAxis(move);
-  rotateLayer(data.axis, data.value, dir);
+
+  switch(move[0]){
+    case "R": rotateLayer(orientation.x, 1, -dir); break;
+    case "L": rotateLayer(orientation.x, -1, dir); break;
+    case "U": rotateLayer(orientation.y, 1, -dir); break;
+    case "D": rotateLayer(orientation.y, -1, dir); break;
+    case "F": rotateLayer(orientation.z, 1, -dir); break;
+    case "B": rotateLayer(orientation.z, -1, dir); break;
+  }
 }
 
 // SCRAMBLE
 function scrambleCube(){
-  const moves = ["R","R'","L","L'","U","U'","D","D'","F","F'","B","B'"];
-  let i = 0;
+  const moves=["R","R'","L","L'","U","U'","D","D'","F","F'","B","B'"];
+  let i=0;
 
   function step(){
     if(i>=20) return;
@@ -251,28 +173,38 @@ function scrambleCube(){
 }
 
 // RESET
-function resetCube(){ buildCube(); }
+function resetCube(){
+  buildCube();
+}
 
-// DRAG
-function toggleDrag(){ dragMode=!dragMode; }
+// DRAG ROTATION (UPDATES ORIENTATION)
+let isDragging=false, prev={x:0,y:0};
 
 document.addEventListener("mousedown",e=>{
-  if(!dragMode) return;
   isDragging=true;
-  prevMouse.x=e.clientX;
-  prevMouse.y=e.clientY;
+  prev.x=e.clientX;
+  prev.y=e.clientY;
 });
 
 document.addEventListener("mouseup",()=>isDragging=false);
 
 document.addEventListener("mousemove",e=>{
-  if(!dragMode||!isDragging) return;
+  if(!isDragging) return;
 
-  cubeGroup.rotation.y += (e.clientX-prevMouse.x)*0.01;
-  cubeGroup.rotation.x += (e.clientY-prevMouse.y)*0.01;
+  let dx=e.clientX-prev.x;
+  let dy=e.clientY-prev.y;
 
-  prevMouse.x=e.clientX;
-  prevMouse.y=e.clientY;
+  cubeGroup.rotation.y += dx*0.01;
+  cubeGroup.rotation.x += dy*0.01;
+
+  // update orientation vectors
+  const m = new THREE.Matrix4().extractRotation(cubeGroup.matrix);
+  orientation.x.set(1,0,0).applyMatrix4(m).round();
+  orientation.y.set(0,1,0).applyMatrix4(m).round();
+  orientation.z.set(0,0,1).applyMatrix4(m).round();
+
+  prev.x=e.clientX;
+  prev.y=e.clientY;
 });
 
 // LOOP
