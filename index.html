@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Reset Solve)</title>
+<title>Rubik's Cube (Full)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -18,7 +18,7 @@
     left: 10px;
   }
 
-  #solve {
+  #controls {
     position: absolute;
     bottom: 20px;
     left: 50%;
@@ -35,6 +35,7 @@
 </head>
 <body>
 
+<!-- COLOR SELECT -->
 <div id="colors">
   <button onclick="goToFace('white')" style="background:white;">White</button>
   <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
@@ -44,6 +45,7 @@
   <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
 </div>
 
+<!-- MOVES -->
 <div id="moves">
   <button onclick="turn('R')">R</button>
   <button onclick="turn('R\'')">R'</button>
@@ -55,8 +57,10 @@
   <button onclick="turn('D\'')">D'</button>
 </div>
 
-<div id="solve">
+<!-- CONTROL BUTTONS -->
+<div id="controls">
   <button onclick="resetCube()">SOLVE</button>
+  <button onclick="scrambleCube()">SCRAMBLE</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -92,7 +96,7 @@ const COLORS = {
   black: 0x111111
 };
 
-// BUILD CUBE FUNCTION
+// BUILD CUBE
 function buildCube(){
   if(cubeGroup) scene.remove(cubeGroup);
 
@@ -123,15 +127,23 @@ function buildCube(){
   }
 }
 
-// INITIAL BUILD
+// INITIAL
 buildCube();
 
-// RESET FUNCTION (SOLVE)
-function resetCube(){
-  buildCube();
+// SNAP FIX
+function snapCube(){
+  cubes.forEach(c=>{
+    c.position.x = Math.round(c.position.x / 1.05) * 1.05;
+    c.position.y = Math.round(c.position.y / 1.05) * 1.05;
+    c.position.z = Math.round(c.position.z / 1.05) * 1.05;
+
+    c.rotation.x = Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2);
+    c.rotation.y = Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2);
+    c.rotation.z = Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2);
+  });
 }
 
-// ROTATION
+// ROTATE LAYER
 function rotateLayer(axis, value, dir){
   const group = new THREE.Group();
   scene.add(group);
@@ -160,6 +172,7 @@ function rotateLayer(axis, value, dir){
       });
 
       scene.remove(group);
+      snapCube();
     }
   }
   anim();
@@ -177,6 +190,30 @@ function turn(move){
     case "D": rotateLayer("y",-1,1); break;
     case "D'": rotateLayer("y",-1,-1); break;
   }
+}
+
+// SCRAMBLE
+function scrambleCube(){
+  const moves = ["R","R'","L","L'","U","U'","D","D'"];
+  let i = 0;
+  let length = 20;
+
+  function step(){
+    if(i >= length) return;
+
+    let move = moves[Math.floor(Math.random()*moves.length)];
+    turn(move);
+
+    i++;
+    setTimeout(step, 120);
+  }
+
+  step();
+}
+
+// RESET
+function resetCube(){
+  buildCube();
 }
 
 // CAMERA ROTATION
