@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Drag Enabled)</title>
+<title>Rubik's Cube (Drag Fixed)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -69,7 +69,7 @@ let cubeGroup;
 let cubes = [];
 let isTurning = false;
 
-// DRAG VARIABLES
+// DRAG
 let dragMode = false;
 let isDragging = false;
 let prevMouse = { x: 0, y: 0 };
@@ -85,7 +85,7 @@ const COLORS = {
   black: 0x111111
 };
 
-// BUILD CUBE
+// BUILD
 function buildCube(){
   if(cubeGroup) scene.remove(cubeGroup);
 
@@ -116,7 +116,6 @@ function buildCube(){
   }
 }
 
-// INIT
 buildCube();
 
 // SNAP
@@ -132,7 +131,7 @@ function snapCube(){
   });
 }
 
-// ROTATE LAYER
+// ROTATE
 function rotateLayer(axis, value, dir){
   if(isTurning) return;
   isTurning = true;
@@ -190,14 +189,12 @@ function turn(move){
 function scrambleCube(){
   const moves = ["R","R'","L","L'","U","U'","D","D'"];
   let i = 0;
-  let length = 20;
 
   function step(){
-    if(i >= length) return;
+    if(i >= 20) return;
 
     if(!isTurning){
-      let move = moves[Math.floor(Math.random()*moves.length)];
-      turn(move);
+      turn(moves[Math.floor(Math.random()*moves.length)]);
       i++;
     }
 
@@ -212,7 +209,7 @@ function resetCube(){
   buildCube();
 }
 
-// CAMERA SNAP ROTATION
+// CAMERA SNAP
 let targetRotation = { x: 0, y: 0 };
 
 function goToFace(color){
@@ -227,20 +224,25 @@ function goToFace(color){
 // DRAG MODE
 function toggleDrag(){
   dragMode = !dragMode;
+
+  if(dragMode){
+    targetRotation.x = cubeGroup.rotation.x;
+    targetRotation.y = cubeGroup.rotation.y;
+  }
 }
 
-document.addEventListener("mousedown", (e)=>{
+document.addEventListener("mousedown",(e)=>{
   if(!dragMode) return;
   isDragging = true;
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
 });
 
-document.addEventListener("mouseup", ()=>{
+document.addEventListener("mouseup",()=>{
   isDragging = false;
 });
 
-document.addEventListener("mousemove", (e)=>{
+document.addEventListener("mousemove",(e)=>{
   if(!dragMode || !isDragging) return;
 
   let dx = e.clientX - prevMouse.x;
@@ -257,8 +259,10 @@ document.addEventListener("mousemove", (e)=>{
 function animate(){
   requestAnimationFrame(animate);
 
-  cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
-  cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
+  if(!dragMode){
+    cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
+    cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
+  }
 
   renderer.render(scene,camera);
 }
