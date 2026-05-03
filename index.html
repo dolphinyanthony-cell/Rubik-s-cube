@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (With Solve)</title>
+<title>Rubik's Cube (Reset Solve)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -56,7 +56,7 @@
 </div>
 
 <div id="solve">
-  <button onclick="solveCube()">SOLVE</button>
+  <button onclick="resetCube()">SOLVE</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -72,17 +72,16 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// LIGHT
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 const light = new THREE.PointLight(0xffffff, 1.2);
 light.position.set(10,10,10);
 scene.add(light);
 
-const cubeGroup = new THREE.Group();
-scene.add(cubeGroup);
+let cubeGroup;
+let cubes = [];
 
-const cubes = [];
-const moveHistory = [];
-
+// COLORS
 const COLORS = {
   white: 0xffffff,
   yellow: 0xffff00,
@@ -93,42 +92,43 @@ const COLORS = {
   black: 0x111111
 };
 
-function createCube(x,y,z){
-  const materials = [
-    new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: x===-1?COLORS.orange:COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: y===1?COLORS.white:COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: y===-1?COLORS.yellow:COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: z===1?COLORS.green:COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: z===-1?COLORS.blue:COLORS.black })
-  ];
+// BUILD CUBE FUNCTION
+function buildCube(){
+  if(cubeGroup) scene.remove(cubeGroup);
 
-  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), materials);
-  cube.position.set(x*1.05,y*1.05,z*1.05);
+  cubeGroup = new THREE.Group();
+  scene.add(cubeGroup);
+  cubes = [];
 
-  cubeGroup.add(cube);
-  cubes.push(cube);
-}
+  for(let x=-1;x<=1;x++){
+    for(let y=-1;y<=1;y++){
+      for(let z=-1;z<=1;z++){
 
-for(let x=-1;x<=1;x++){
-  for(let y=-1;y<=1;y++){
-    for(let z=-1;z<=1;z++){
-      createCube(x,y,z);
+        const materials = [
+          new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
+          new THREE.MeshStandardMaterial({ color: x===-1?COLORS.orange:COLORS.black }),
+          new THREE.MeshStandardMaterial({ color: y===1?COLORS.white:COLORS.black }),
+          new THREE.MeshStandardMaterial({ color: y===-1?COLORS.yellow:COLORS.black }),
+          new THREE.MeshStandardMaterial({ color: z===1?COLORS.green:COLORS.black }),
+          new THREE.MeshStandardMaterial({ color: z===-1?COLORS.blue:COLORS.black })
+        ];
+
+        const cube = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), materials);
+        cube.position.set(x*1.05,y*1.05,z*1.05);
+
+        cubeGroup.add(cube);
+        cubes.push(cube);
+      }
     }
   }
 }
 
-// SNAP
-function snapCube(){
-  cubes.forEach(c=>{
-    c.position.x = Math.round(c.position.x / 1.05) * 1.05;
-    c.position.y = Math.round(c.position.y / 1.05) * 1.05;
-    c.position.z = Math.round(c.position.z / 1.05) * 1.05;
+// INITIAL BUILD
+buildCube();
 
-    c.rotation.x = Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2);
-    c.rotation.y = Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2);
-    c.rotation.z = Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2);
-  });
+// RESET FUNCTION (SOLVE)
+function resetCube(){
+  buildCube();
 }
 
 // ROTATION
@@ -160,16 +160,13 @@ function rotateLayer(axis, value, dir){
       });
 
       scene.remove(group);
-      snapCube();
     }
   }
   anim();
 }
 
 // MOVES
-function turn(move, record=true){
-  if(record) moveHistory.push(move);
-
+function turn(move){
   switch(move){
     case "R": rotateLayer("x",1,-1); break;
     case "R'": rotateLayer("x",1,1); break;
@@ -182,32 +179,25 @@ function turn(move, record=true){
   }
 }
 
-// SOLVE (reverse moves)
-function solveCube(){
-  let reversed = [...moveHistory].reverse();
+// CAMERA ROTATION
+let targetRotation = { x: 0, y: 0 };
 
-  function inverse(move){
-    return move.includes("'") ? move.replace("'","") : move + "'";
-  }
-
-  let i = 0;
-  function step(){
-    if(i >= reversed.length) {
-      moveHistory.length = 0;
-      return;
-    }
-
-    turn(inverse(reversed[i]), false);
-    i++;
-    setTimeout(step, 150);
-  }
-
-  step();
+function goToFace(color){
+  if(color==="white") targetRotation = {x: Math.PI/2, y: 0};
+  if(color==="yellow") targetRotation = {x: -Math.PI/2, y: 0};
+  if(color==="green") targetRotation = {x: 0, y: 0};
+  if(color==="blue") targetRotation = {x: 0, y: Math.PI};
+  if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
+  if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
 }
 
 // LOOP
 function animate(){
   requestAnimationFrame(animate);
+
+  cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
+  cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
+
   renderer.render(scene,camera);
 }
 animate();
