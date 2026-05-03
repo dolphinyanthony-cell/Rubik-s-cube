@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube Full</title>
+<title>Rubik's Cube (Fixed)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -28,7 +28,6 @@
 </head>
 <body>
 
-<!-- 🎨 COLOR SELECTOR -->
 <div id="colors">
   <button onclick="goToFace('white')" style="background:white;">White</button>
   <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
@@ -38,7 +37,6 @@
   <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
 </div>
 
-<!-- 🔁 MOVE BUTTONS -->
 <div id="moves">
   <button onclick="turn('R')">R</button>
   <button onclick="turn('R\'')">R'</button>
@@ -69,11 +67,9 @@ const light = new THREE.PointLight(0xffffff, 1.2);
 light.position.set(10,10,10);
 scene.add(light);
 
-// GROUP
 const cubeGroup = new THREE.Group();
 scene.add(cubeGroup);
 
-// STORE PIECES
 const cubes = [];
 
 // COLORS
@@ -87,7 +83,7 @@ const COLORS = {
   black: 0x111111
 };
 
-// CREATE MINI CUBE
+// CREATE PIECES
 function createCube(x,y,z){
   const materials = [
     new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
@@ -105,7 +101,7 @@ function createCube(x,y,z){
   cubes.push(cube);
 }
 
-// BUILD 3x3x3
+// BUILD
 for(let x=-1;x<=1;x++){
   for(let y=-1;y<=1;y++){
     for(let z=-1;z<=1;z++){
@@ -114,7 +110,20 @@ for(let x=-1;x<=1;x++){
   }
 }
 
-// 🎯 CAMERA TARGET ROTATION
+// SNAP FIX (prevents twisting)
+function snapCube(){
+  cubes.forEach(c=>{
+    c.position.x = Math.round(c.position.x / 1.05) * 1.05;
+    c.position.y = Math.round(c.position.y / 1.05) * 1.05;
+    c.position.z = Math.round(c.position.z / 1.05) * 1.05;
+
+    c.rotation.x = Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2);
+    c.rotation.y = Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2);
+    c.rotation.z = Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2);
+  });
+}
+
+// CAMERA TARGET
 let targetRotation = { x: 0, y: 0 };
 
 function goToFace(color){
@@ -126,7 +135,7 @@ function goToFace(color){
   if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
 }
 
-// 🔄 ROTATE LAYERS
+// ROTATE LAYER
 function rotateLayer(axis, value, dir){
   const group = new THREE.Group();
   scene.add(group);
@@ -147,17 +156,22 @@ function rotateLayer(axis, value, dir){
     if(steps < 20){
       requestAnimationFrame(anim);
     } else {
+      group.updateMatrixWorld();
+
       group.children.slice().forEach(c=>{
         c.applyMatrix4(group.matrix);
         cubeGroup.add(c);
       });
+
       scene.remove(group);
+
+      snapCube(); // ✅ FIXES TWISTING
     }
   }
   anim();
 }
 
-// MOVE BUTTONS
+// MOVES
 function turn(move){
   switch(move){
     case "R": rotateLayer("x",1,-1); break;
@@ -171,11 +185,10 @@ function turn(move){
   }
 }
 
-// 🎬 LOOP
+// LOOP
 function animate(){
   requestAnimationFrame(animate);
 
-  // smooth rotate to selected face
   cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
   cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
 
