@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Camera-Based Moves)</title>
+<title>Rubik's Cube (Center-Locked View)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -176,36 +176,52 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// ✅ CAMERA-BASED AXIS (REAL FIX)
-function getDynamicAxis(move){
+// 🔥 FIND FRONT CENTER
+function getFrontFace(){
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
 
-  const ax = Math.abs(dir.x);
-  const ay = Math.abs(dir.y);
-  const az = Math.abs(dir.z);
+  let bestDot = -Infinity;
+  let best = null;
 
-  // FRONT/BACK
-  if(az >= ax && az >= ay){
-    if(move === "F" || move === "F'")
-      return {axis:"z", value: dir.z < 0 ? 1 : -1};
-    if(move === "B" || move === "B'")
-      return {axis:"z", value: dir.z < 0 ? -1 : 1};
+  cubes.forEach(c=>{
+    if(Math.abs(c.position.x)+Math.abs(c.position.y)+Math.abs(c.position.z)===1.05){
+      let normal = c.position.clone().normalize();
+      let dot = normal.dot(dir);
+
+      if(dot > bestDot){
+        bestDot = dot;
+        best = normal;
+      }
+    }
+  });
+
+  return best;
+}
+
+// 🔥 AXIS BASED ON FRONT
+function getDynamicAxis(move){
+  const f = getFrontFace();
+
+  const fx = Math.round(f.x);
+  const fy = Math.round(f.y);
+  const fz = Math.round(f.z);
+
+  if(move==="F"||move==="F'") return {axis:"z", value:fz};
+  if(move==="B"||move==="B'") return {axis:"z", value:-fz};
+
+  if(move==="R"||move==="R'"){
+    if(Math.abs(fz)===1) return {axis:"x", value:fz};
+    if(Math.abs(fx)===1) return {axis:"z", value:-fx};
   }
 
-  // RIGHT/LEFT
-  if(ax >= az && ax >= ay){
-    if(move === "R" || move === "R'")
-      return {axis:"x", value: dir.x > 0 ? 1 : -1};
-    if(move === "L" || move === "L'")
-      return {axis:"x", value: dir.x > 0 ? -1 : 1};
+  if(move==="L"||move==="L'"){
+    if(Math.abs(fz)===1) return {axis:"x", value:-fz};
+    if(Math.abs(fx)===1) return {axis:"z", value:fx};
   }
 
-  // UP/DOWN
-  if(move === "U" || move === "U'")
-    return {axis:"y", value: dir.y > 0 ? 1 : -1};
-  if(move === "D" || move === "D'")
-    return {axis:"y", value: dir.y > 0 ? -1 : 1};
+  if(move==="U"||move==="U'") return {axis:"y", value:1};
+  if(move==="D"||move==="D'") return {axis:"y", value:-1};
 
   return {axis:"z", value:1};
 }
@@ -223,86 +239,52 @@ function scrambleCube(){
   let i = 0;
 
   function step(){
-    if(i >= 20) return;
-
+    if(i>=20) return;
     if(!isTurning){
       turn(moves[Math.floor(Math.random()*moves.length)]);
       i++;
     }
-
-    setTimeout(step, 30);
+    setTimeout(step,30);
   }
 
   step();
 }
 
 // RESET
-function resetCube(){
-  buildCube();
-}
-
-// CAMERA SNAP
-let targetRotation = { x: 0, y: 0 };
-
-function goToFace(color){
-  if(color==="white") targetRotation = {x: Math.PI/2, y: 0};
-  if(color==="yellow") targetRotation = {x: -Math.PI/2, y: 0};
-  if(color==="green") targetRotation = {x: 0, y: 0};
-  if(color==="blue") targetRotation = {x: 0, y: Math.PI};
-  if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
-  if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
-}
+function resetCube(){ buildCube(); }
 
 // DRAG
-function toggleDrag(){
-  dragMode = !dragMode;
+function toggleDrag(){ dragMode=!dragMode; }
 
-  if(dragMode){
-    targetRotation.x = cubeGroup.rotation.x;
-    targetRotation.y = cubeGroup.rotation.y;
-  }
-}
-
-document.addEventListener("mousedown",(e)=>{
+document.addEventListener("mousedown",e=>{
   if(!dragMode) return;
-  isDragging = true;
-  prevMouse.x = e.clientX;
-  prevMouse.y = e.clientY;
+  isDragging=true;
+  prevMouse.x=e.clientX;
+  prevMouse.y=e.clientY;
 });
 
-document.addEventListener("mouseup",()=>{
-  isDragging = false;
-});
+document.addEventListener("mouseup",()=>isDragging=false);
 
-document.addEventListener("mousemove",(e)=>{
-  if(!dragMode || !isDragging) return;
+document.addEventListener("mousemove",e=>{
+  if(!dragMode||!isDragging) return;
 
-  let dx = e.clientX - prevMouse.x;
-  let dy = e.clientY - prevMouse.y;
+  cubeGroup.rotation.y += (e.clientX-prevMouse.x)*0.01;
+  cubeGroup.rotation.x += (e.clientY-prevMouse.y)*0.01;
 
-  cubeGroup.rotation.y += dx * 0.01;
-  cubeGroup.rotation.x += dy * 0.01;
-
-  prevMouse.x = e.clientX;
-  prevMouse.y = e.clientY;
+  prevMouse.x=e.clientX;
+  prevMouse.y=e.clientY;
 });
 
 // LOOP
 function animate(){
   requestAnimationFrame(animate);
-
-  if(!dragMode){
-    cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
-    cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
-  }
-
   renderer.render(scene,camera);
 }
 animate();
 
 // RESIZE
 window.addEventListener("resize",()=>{
-  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.aspect=window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth,window.innerHeight);
 });
