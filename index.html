@@ -20,7 +20,6 @@
 </head>
 <body>
 
-<!-- COLOR BUTTONS -->
 <div id="colors">
   <button onclick="goToFace('white')" style="background:white;">White</button>
   <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
@@ -30,7 +29,6 @@
   <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
 </div>
 
-<!-- MOVE BUTTONS -->
 <div id="moves">
   <button onclick="turn('R')">R</button>
   <button onclick="turn('R\'')">R'</button>
@@ -47,7 +45,6 @@
   <button onclick="turn('B\'')">B'</button>
 </div>
 
-<!-- CONTROLS -->
 <div id="controls">
   <button onclick="resetCube()">SOLVE</button>
   <button onclick="scrambleCube()">SCRAMBLE</button>
@@ -103,8 +100,9 @@ function buildCube(){
         const materials = [
           new THREE.MeshStandardMaterial({color:x===1?0xff0000:0x111111}),
           new THREE.MeshStandardMaterial({color:x===-1?0xff8000:0x111111}),
-          new THREE.MeshStandardMaterial({color:y===1?0xffffff:0x111111}),
-          new THREE.MeshStandardMaterial({color:y===-1?0xffff00:0x111111}),
+          // 🔥 SWAPPED WHITE/YELLOW
+          new THREE.MeshStandardMaterial({color:y===1?0xffff00:0x111111}),
+          new THREE.MeshStandardMaterial({color:y===-1?0xffffff:0x111111}),
           new THREE.MeshStandardMaterial({color:z===1?0x00ff00:0x111111}),
           new THREE.MeshStandardMaterial({color:z===-1?0x0000ff:0x111111})
         ];
@@ -192,10 +190,10 @@ function resetCube(){
   buildCube();
 }
 
-// 🔥 SNAP TO COLOR FACE
+// 🔥 UPDATED COLOR CAMERA (SWAPPED)
 function goToFace(color){
-  if(color==="white") cubeGroup.rotation.set(-Math.PI/2,0,0);
-  if(color==="yellow") cubeGroup.rotation.set(Math.PI/2,0,0);
+  if(color==="white") cubeGroup.rotation.set(Math.PI/2,0,0);
+  if(color==="yellow") cubeGroup.rotation.set(-Math.PI/2,0,0);
   if(color==="green") cubeGroup.rotation.set(0,0,0);
   if(color==="blue") cubeGroup.rotation.set(0,Math.PI,0);
   if(color==="red") cubeGroup.rotation.set(0,-Math.PI/2,0);
@@ -212,7 +210,7 @@ function updateOrientation(){
   orientation.z.set(0,0,1).applyMatrix4(m).round();
 }
 
-// DRAG MODE TOGGLE
+// DRAG MODE
 function toggleDrag(){
   dragMode = !dragMode;
 }
