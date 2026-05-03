@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Fixed)</title>
+<title>Rubik's Cube (With Solve)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -16,6 +16,13 @@
     position: absolute;
     top: 10px;
     left: 10px;
+  }
+
+  #solve {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   button {
@@ -48,6 +55,10 @@
   <button onclick="turn('D\'')">D'</button>
 </div>
 
+<div id="solve">
+  <button onclick="solveCube()">SOLVE</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 
 <script>
@@ -61,7 +72,6 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// LIGHT
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 const light = new THREE.PointLight(0xffffff, 1.2);
 light.position.set(10,10,10);
@@ -71,8 +81,8 @@ const cubeGroup = new THREE.Group();
 scene.add(cubeGroup);
 
 const cubes = [];
+const moveHistory = [];
 
-// COLORS
 const COLORS = {
   white: 0xffffff,
   yellow: 0xffff00,
@@ -83,7 +93,6 @@ const COLORS = {
   black: 0x111111
 };
 
-// CREATE PIECES
 function createCube(x,y,z){
   const materials = [
     new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
@@ -101,7 +110,6 @@ function createCube(x,y,z){
   cubes.push(cube);
 }
 
-// BUILD
 for(let x=-1;x<=1;x++){
   for(let y=-1;y<=1;y++){
     for(let z=-1;z<=1;z++){
@@ -110,7 +118,7 @@ for(let x=-1;x<=1;x++){
   }
 }
 
-// SNAP FIX (prevents twisting)
+// SNAP
 function snapCube(){
   cubes.forEach(c=>{
     c.position.x = Math.round(c.position.x / 1.05) * 1.05;
@@ -123,19 +131,7 @@ function snapCube(){
   });
 }
 
-// CAMERA TARGET
-let targetRotation = { x: 0, y: 0 };
-
-function goToFace(color){
-  if(color==="white") targetRotation = {x: Math.PI/2, y: 0};
-  if(color==="yellow") targetRotation = {x: -Math.PI/2, y: 0};
-  if(color==="green") targetRotation = {x: 0, y: 0};
-  if(color==="blue") targetRotation = {x: 0, y: Math.PI};
-  if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
-  if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
-}
-
-// ROTATE LAYER
+// ROTATION
 function rotateLayer(axis, value, dir){
   const group = new THREE.Group();
   scene.add(group);
@@ -164,15 +160,16 @@ function rotateLayer(axis, value, dir){
       });
 
       scene.remove(group);
-
-      snapCube(); // ✅ FIXES TWISTING
+      snapCube();
     }
   }
   anim();
 }
 
 // MOVES
-function turn(move){
+function turn(move, record=true){
+  if(record) moveHistory.push(move);
+
   switch(move){
     case "R": rotateLayer("x",1,-1); break;
     case "R'": rotateLayer("x",1,1); break;
@@ -185,13 +182,32 @@ function turn(move){
   }
 }
 
+// SOLVE (reverse moves)
+function solveCube(){
+  let reversed = [...moveHistory].reverse();
+
+  function inverse(move){
+    return move.includes("'") ? move.replace("'","") : move + "'";
+  }
+
+  let i = 0;
+  function step(){
+    if(i >= reversed.length) {
+      moveHistory.length = 0;
+      return;
+    }
+
+    turn(inverse(reversed[i]), false);
+    i++;
+    setTimeout(step, 150);
+  }
+
+  step();
+}
+
 // LOOP
 function animate(){
   requestAnimationFrame(animate);
-
-  cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
-  cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
-
   renderer.render(scene,camera);
 }
 animate();
