@@ -2,28 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Full)</title>
+<title>Rubik's Cube (Stable)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
-  #moves {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-  }
-
-  #colors {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-  }
-
-  #controls {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
+  #moves { position: absolute; top: 10px; right: 10px; }
+  #colors { position: absolute; top: 10px; left: 10px; }
+  #controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
 
   button {
     margin: 3px;
@@ -35,7 +20,6 @@
 </head>
 <body>
 
-<!-- COLOR SELECT -->
 <div id="colors">
   <button onclick="goToFace('white')" style="background:white;">White</button>
   <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
@@ -45,7 +29,6 @@
   <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
 </div>
 
-<!-- MOVES -->
 <div id="moves">
   <button onclick="turn('R')">R</button>
   <button onclick="turn('R\'')">R'</button>
@@ -57,7 +40,6 @@
   <button onclick="turn('D\'')">D'</button>
 </div>
 
-<!-- CONTROL BUTTONS -->
 <div id="controls">
   <button onclick="resetCube()">SOLVE</button>
   <button onclick="scrambleCube()">SCRAMBLE</button>
@@ -84,6 +66,7 @@ scene.add(light);
 
 let cubeGroup;
 let cubes = [];
+let isTurning = false;
 
 // COLORS
 const COLORS = {
@@ -127,10 +110,10 @@ function buildCube(){
   }
 }
 
-// INITIAL
+// INIT
 buildCube();
 
-// SNAP FIX
+// SNAP
 function snapCube(){
   cubes.forEach(c=>{
     c.position.x = Math.round(c.position.x / 1.05) * 1.05;
@@ -143,10 +126,13 @@ function snapCube(){
   });
 }
 
-// ROTATE LAYER
+// ROTATE LAYER (FIXED)
 function rotateLayer(axis, value, dir){
+  if(isTurning) return;
+  isTurning = true;
+
   const group = new THREE.Group();
-  scene.add(group);
+  cubeGroup.add(group);
 
   cubes.forEach(c=>{
     if(Math.round(c.position[axis]/1.05) === value){
@@ -171,10 +157,13 @@ function rotateLayer(axis, value, dir){
         cubeGroup.add(c);
       });
 
-      scene.remove(group);
+      cubeGroup.remove(group);
+
       snapCube();
+      isTurning = false;
     }
   }
+
   anim();
 }
 
@@ -192,7 +181,7 @@ function turn(move){
   }
 }
 
-// SCRAMBLE
+// SCRAMBLE (SAFE)
 function scrambleCube(){
   const moves = ["R","R'","L","L'","U","U'","D","D'"];
   let i = 0;
@@ -201,11 +190,13 @@ function scrambleCube(){
   function step(){
     if(i >= length) return;
 
-    let move = moves[Math.floor(Math.random()*moves.length)];
-    turn(move);
+    if(!isTurning){
+      let move = moves[Math.floor(Math.random()*moves.length)];
+      turn(move);
+      i++;
+    }
 
-    i++;
-    setTimeout(step, 120);
+    requestAnimationFrame(step);
   }
 
   step();
@@ -216,7 +207,7 @@ function resetCube(){
   buildCube();
 }
 
-// CAMERA ROTATION
+// CAMERA
 let targetRotation = { x: 0, y: 0 };
 
 function goToFace(color){
