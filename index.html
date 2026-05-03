@@ -2,11 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (PRO Simulator)</title>
+<title>Rubik's Cube (PRO + UI)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
   #moves { position: absolute; top: 10px; right: 10px; }
+  #colors { position: absolute; top: 10px; left: 10px; }
   #controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
 
   button {
@@ -19,6 +20,17 @@
 </head>
 <body>
 
+<!-- COLOR BUTTONS -->
+<div id="colors">
+  <button onclick="goToFace('white')" style="background:white;">White</button>
+  <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
+  <button onclick="goToFace('green')" style="background:green;">Green</button>
+  <button onclick="goToFace('blue')" style="background:blue;color:white;">Blue</button>
+  <button onclick="goToFace('red')" style="background:red;">Red</button>
+  <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
+</div>
+
+<!-- MOVE BUTTONS -->
 <div id="moves">
   <button onclick="turn('R')">R</button>
   <button onclick="turn('R\'')">R'</button>
@@ -35,9 +47,11 @@
   <button onclick="turn('B\'')">B'</button>
 </div>
 
+<!-- CONTROLS -->
 <div id="controls">
   <button onclick="resetCube()">SOLVE</button>
   <button onclick="scrambleCube()">SCRAMBLE</button>
+  <button onclick="toggleDrag()">DRAG MODE</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -53,6 +67,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// LIGHT
 scene.add(new THREE.AmbientLight(0xffffff,0.7));
 const light = new THREE.PointLight(0xffffff,1.2);
 light.position.set(10,10,10);
@@ -64,7 +79,12 @@ scene.add(cubeGroup);
 let cubes = [];
 let isTurning = false;
 
-// ORIENTATION BASIS (THIS IS THE KEY)
+// DRAG MODE
+let dragMode = false;
+let isDragging = false;
+let prev = {x:0,y:0};
+
+// ORIENTATION
 let orientation = {
   x: new THREE.Vector3(1,0,0),
   y: new THREE.Vector3(0,1,0),
@@ -98,10 +118,9 @@ function buildCube(){
     }
   }
 }
-
 buildCube();
 
-// ROTATE LAYER (uses orientation)
+// ROTATE LAYER
 function rotateLayer(axisVec, layerValue, dir){
   if(isTurning) return;
   isTurning = true;
@@ -127,21 +146,18 @@ function rotateLayer(axisVec, layerValue, dir){
       requestAnimationFrame(anim);
     } else {
       group.updateMatrixWorld();
-
       group.children.slice().forEach(c=>{
         c.applyMatrix4(group.matrix);
         cubeGroup.add(c);
       });
-
       cubeGroup.remove(group);
       isTurning = false;
     }
   }
-
   anim();
 }
 
-// TURN (REAL MAPPING)
+// MOVES
 function turn(move){
   let dir = move.includes("'") ? 1 : -1;
 
@@ -168,7 +184,6 @@ function scrambleCube(){
     }
     setTimeout(step,30);
   }
-
   step();
 }
 
@@ -177,10 +192,34 @@ function resetCube(){
   buildCube();
 }
 
-// DRAG ROTATION (UPDATES ORIENTATION)
-let isDragging=false, prev={x:0,y:0};
+// 🔥 SNAP TO COLOR FACE
+function goToFace(color){
+  if(color==="white") cubeGroup.rotation.set(-Math.PI/2,0,0);
+  if(color==="yellow") cubeGroup.rotation.set(Math.PI/2,0,0);
+  if(color==="green") cubeGroup.rotation.set(0,0,0);
+  if(color==="blue") cubeGroup.rotation.set(0,Math.PI,0);
+  if(color==="red") cubeGroup.rotation.set(0,-Math.PI/2,0);
+  if(color==="orange") cubeGroup.rotation.set(0,Math.PI/2,0);
 
+  updateOrientation();
+}
+
+// UPDATE ORIENTATION
+function updateOrientation(){
+  const m = new THREE.Matrix4().extractRotation(cubeGroup.matrix);
+  orientation.x.set(1,0,0).applyMatrix4(m).round();
+  orientation.y.set(0,1,0).applyMatrix4(m).round();
+  orientation.z.set(0,0,1).applyMatrix4(m).round();
+}
+
+// DRAG MODE TOGGLE
+function toggleDrag(){
+  dragMode = !dragMode;
+}
+
+// MOUSE
 document.addEventListener("mousedown",e=>{
+  if(!dragMode) return;
   isDragging=true;
   prev.x=e.clientX;
   prev.y=e.clientY;
@@ -189,19 +228,12 @@ document.addEventListener("mousedown",e=>{
 document.addEventListener("mouseup",()=>isDragging=false);
 
 document.addEventListener("mousemove",e=>{
-  if(!isDragging) return;
+  if(!dragMode || !isDragging) return;
 
-  let dx=e.clientX-prev.x;
-  let dy=e.clientY-prev.y;
+  cubeGroup.rotation.y += (e.clientX-prev.x)*0.01;
+  cubeGroup.rotation.x += (e.clientY-prev.y)*0.01;
 
-  cubeGroup.rotation.y += dx*0.01;
-  cubeGroup.rotation.x += dy*0.01;
-
-  // update orientation vectors
-  const m = new THREE.Matrix4().extractRotation(cubeGroup.matrix);
-  orientation.x.set(1,0,0).applyMatrix4(m).round();
-  orientation.y.set(0,1,0).applyMatrix4(m).round();
-  orientation.z.set(0,0,1).applyMatrix4(m).round();
+  updateOrientation();
 
   prev.x=e.clientX;
   prev.y=e.clientY;
