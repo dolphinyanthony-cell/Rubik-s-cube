@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube Moves</title>
+<title>Rubik's Cube Moves (Colored)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -42,29 +42,29 @@ scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(0,0,7);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // LIGHT
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const light = new THREE.PointLight(0xffffff, 1);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const light = new THREE.PointLight(0xffffff, 1.2);
 light.position.set(10,10,10);
 scene.add(light);
 
 const cubeGroup = new THREE.Group();
 scene.add(cubeGroup);
 
-// STORE CUBES
 const cubes = [];
 
+// BRIGHT COLORS (more realistic)
 const COLORS = {
   white: 0xffffff,
-  yellow: 0xffff00,
-  green: 0x00ff00,
-  blue: 0x0000ff,
-  orange: 0xff8000,
-  red: 0xff0000,
+  yellow: 0xffee00,
+  green: 0x00cc44,
+  blue: 0x0033cc,
+  orange: 0xff6600,
+  red: 0xcc0000,
   black: 0x111111
 };
 
@@ -78,12 +78,16 @@ function createCube(x,y,z){
     new THREE.MeshStandardMaterial({ color: z===-1?COLORS.blue:COLORS.black })
   ];
 
-  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.95,0.95,0.95), materials);
-  cube.position.set(x,y,z);
+  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), materials);
+
+  // spacing makes pieces visible
+  cube.position.set(x*1.05,y*1.05,z*1.05);
+
   cubeGroup.add(cube);
   cubes.push(cube);
 }
 
+// BUILD
 for(let x=-1;x<=1;x++){
   for(let y=-1;y<=1;y++){
     for(let z=-1;z<=1;z++){
@@ -92,20 +96,20 @@ for(let x=-1;x<=1;x++){
   }
 }
 
-// ROTATION FUNCTION
+// ROTATION
 function rotateLayer(axis, value, dir){
   const group = new THREE.Group();
   scene.add(group);
 
   cubes.forEach(c=>{
-    if(Math.round(c.position[axis]) === value){
+    if(Math.round(c.position[axis]/1.05) === value){
       group.add(c);
     }
   });
 
   let angle = dir * Math.PI/2;
-
   let steps = 0;
+
   function anim(){
     steps++;
     group.rotation[axis] += angle/20;
@@ -113,7 +117,6 @@ function rotateLayer(axis, value, dir){
     if(steps < 20){
       requestAnimationFrame(anim);
     } else {
-      // detach cubes back
       group.children.slice().forEach(c=>{
         c.applyMatrix4(group.matrix);
         scene.add(c);
@@ -124,7 +127,7 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// MOVE LOGIC
+// MOVES
 function turn(move){
   switch(move){
     case "R": rotateLayer("x",1,-1); break;
@@ -138,7 +141,7 @@ function turn(move){
   }
 }
 
-// RENDER LOOP
+// LOOP
 function animate(){
   requestAnimationFrame(animate);
   renderer.render(scene,camera);
