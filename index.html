@@ -2,20 +2,19 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube Color Selector</title>
+<title>Rubik's Cube Moves</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
-  #ui {
+  #moves {
     position: absolute;
     top: 10px;
-    left: 10px;
+    right: 10px;
   }
 
   button {
-    display: block;
-    margin: 5px;
-    padding: 10px;
+    margin: 3px;
+    padding: 8px;
     font-weight: bold;
     cursor: pointer;
   }
@@ -23,13 +22,15 @@
 </head>
 <body>
 
-<div id="ui">
-  <button onclick="goToFace('white')" style="background:white;">White</button>
-  <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
-  <button onclick="goToFace('green')" style="background:green;">Green</button>
-  <button onclick="goToFace('blue')" style="background:blue; color:white;">Blue</button>
-  <button onclick="goToFace('red')" style="background:red;">Red</button>
-  <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
+<div id="moves">
+  <button onclick="turn('R')">R</button>
+  <button onclick="turn('R\'')">R'</button>
+  <button onclick="turn('L')">L</button>
+  <button onclick="turn('L\'')">L'</button>
+  <button onclick="turn('U')">U</button>
+  <button onclick="turn('U\'')">U'</button>
+  <button onclick="turn('D')">D</button>
+  <button onclick="turn('D\'')">D'</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -45,17 +46,18 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// LIGHTING
+// LIGHT
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const light = new THREE.PointLight(0xffffff, 1);
 light.position.set(10,10,10);
 scene.add(light);
 
-// GROUP
 const cubeGroup = new THREE.Group();
 scene.add(cubeGroup);
 
-// COLORS
+// STORE CUBES
+const cubes = [];
+
 const COLORS = {
   white: 0xffffff,
   yellow: 0xffff00,
@@ -66,70 +68,79 @@ const COLORS = {
   black: 0x111111
 };
 
-// CREATE CUBES
-function createCube(x, y, z) {
+function createCube(x,y,z){
   const materials = [
-    new THREE.MeshStandardMaterial({ color: x === 1 ? COLORS.red : COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: x === -1 ? COLORS.orange : COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: y === 1 ? COLORS.white : COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: y === -1 ? COLORS.yellow : COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: z === 1 ? COLORS.green : COLORS.black }),
-    new THREE.MeshStandardMaterial({ color: z === -1 ? COLORS.blue : COLORS.black })
+    new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
+    new THREE.MeshStandardMaterial({ color: x===-1?COLORS.orange:COLORS.black }),
+    new THREE.MeshStandardMaterial({ color: y===1?COLORS.white:COLORS.black }),
+    new THREE.MeshStandardMaterial({ color: y===-1?COLORS.yellow:COLORS.black }),
+    new THREE.MeshStandardMaterial({ color: z===1?COLORS.green:COLORS.black }),
+    new THREE.MeshStandardMaterial({ color: z===-1?COLORS.blue:COLORS.black })
   ];
 
   const cube = new THREE.Mesh(new THREE.BoxGeometry(0.95,0.95,0.95), materials);
   cube.position.set(x,y,z);
   cubeGroup.add(cube);
+  cubes.push(cube);
 }
 
-// BUILD
-for (let x=-1;x<=1;x++){
-  for (let y=-1;y<=1;y++){
-    for (let z=-1;z<=1;z++){
+for(let x=-1;x<=1;x++){
+  for(let y=-1;y<=1;y++){
+    for(let z=-1;z<=1;z++){
       createCube(x,y,z);
     }
   }
 }
 
-// 🖱️ DRAG ROTATION
-let isDragging = false;
-let prev = {x:0,y:0};
+// ROTATION FUNCTION
+function rotateLayer(axis, value, dir){
+  const group = new THREE.Group();
+  scene.add(group);
 
-document.addEventListener('mousedown',()=>isDragging=true);
-document.addEventListener('mouseup',()=>isDragging=false);
+  cubes.forEach(c=>{
+    if(Math.round(c.position[axis]) === value){
+      group.add(c);
+    }
+  });
 
-document.addEventListener('mousemove',(e)=>{
-  if(!isDragging) return;
+  let angle = dir * Math.PI/2;
 
-  let dx = e.offsetX - prev.x;
-  let dy = e.offsetY - prev.y;
+  let steps = 0;
+  function anim(){
+    steps++;
+    group.rotation[axis] += angle/20;
 
-  cubeGroup.rotation.y += dx * 0.01;
-  cubeGroup.rotation.x += dy * 0.01;
-
-  prev = {x:e.offsetX,y:e.offsetY};
-});
-
-// 🎯 TARGET ROTATION (for buttons)
-let targetRotation = { x: 0, y: 0 };
-
-// FACE VIEW POSITIONS
-function goToFace(color){
- if(color==="white") targetRotation = {x: Math.PI/2, y: 0};
-if(color==="yellow") targetRotation = {x: -Math.PI/2, y: 0};
-  if(color==="green") targetRotation = {x: 0, y: 0};
-  if(color==="blue") targetRotation = {x: 0, y: Math.PI};
-  if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
-  if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
+    if(steps < 20){
+      requestAnimationFrame(anim);
+    } else {
+      // detach cubes back
+      group.children.slice().forEach(c=>{
+        c.applyMatrix4(group.matrix);
+        scene.add(c);
+      });
+      scene.remove(group);
+    }
+  }
+  anim();
 }
 
-// SMOOTH ROTATION
+// MOVE LOGIC
+function turn(move){
+  switch(move){
+    case "R": rotateLayer("x",1,-1); break;
+    case "R'": rotateLayer("x",1,1); break;
+    case "L": rotateLayer("x",-1,1); break;
+    case "L'": rotateLayer("x",-1,-1); break;
+    case "U": rotateLayer("y",1,-1); break;
+    case "U'": rotateLayer("y",1,1); break;
+    case "D": rotateLayer("y",-1,1); break;
+    case "D'": rotateLayer("y",-1,-1); break;
+  }
+}
+
+// RENDER LOOP
 function animate(){
   requestAnimationFrame(animate);
-
-  cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
-  cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
-
   renderer.render(scene,camera);
 }
 animate();
