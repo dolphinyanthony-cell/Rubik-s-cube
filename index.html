@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube Moves (Colored)</title>
+<title>Rubik's Cube Full</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -10,6 +10,12 @@
     position: absolute;
     top: 10px;
     right: 10px;
+  }
+
+  #colors {
+    position: absolute;
+    top: 10px;
+    left: 10px;
   }
 
   button {
@@ -22,6 +28,17 @@
 </head>
 <body>
 
+<!-- 🎨 COLOR SELECTOR -->
+<div id="colors">
+  <button onclick="goToFace('white')" style="background:white;">White</button>
+  <button onclick="goToFace('yellow')" style="background:yellow;">Yellow</button>
+  <button onclick="goToFace('green')" style="background:green;">Green</button>
+  <button onclick="goToFace('blue')" style="background:blue; color:white;">Blue</button>
+  <button onclick="goToFace('red')" style="background:red;">Red</button>
+  <button onclick="goToFace('orange')" style="background:orange;">Orange</button>
+</div>
+
+<!-- 🔁 MOVE BUTTONS -->
 <div id="moves">
   <button onclick="turn('R')">R</button>
   <button onclick="turn('R\'')">R'</button>
@@ -52,22 +69,25 @@ const light = new THREE.PointLight(0xffffff, 1.2);
 light.position.set(10,10,10);
 scene.add(light);
 
+// GROUP
 const cubeGroup = new THREE.Group();
 scene.add(cubeGroup);
 
+// STORE PIECES
 const cubes = [];
 
-// BRIGHT COLORS (more realistic)
+// COLORS
 const COLORS = {
   white: 0xffffff,
-  yellow: 0xffee00,
-  green: 0x00cc44,
-  blue: 0x0033cc,
-  orange: 0xff6600,
-  red: 0xcc0000,
+  yellow: 0xffff00,
+  green: 0x00ff00,
+  blue: 0x0000ff,
+  orange: 0xff8000,
+  red: 0xff0000,
   black: 0x111111
 };
 
+// CREATE MINI CUBE
 function createCube(x,y,z){
   const materials = [
     new THREE.MeshStandardMaterial({ color: x===1?COLORS.red:COLORS.black }),
@@ -79,15 +99,13 @@ function createCube(x,y,z){
   ];
 
   const cube = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), materials);
-
-  // spacing makes pieces visible
   cube.position.set(x*1.05,y*1.05,z*1.05);
 
   cubeGroup.add(cube);
   cubes.push(cube);
 }
 
-// BUILD
+// BUILD 3x3x3
 for(let x=-1;x<=1;x++){
   for(let y=-1;y<=1;y++){
     for(let z=-1;z<=1;z++){
@@ -96,7 +114,19 @@ for(let x=-1;x<=1;x++){
   }
 }
 
-// ROTATION
+// 🎯 CAMERA TARGET ROTATION
+let targetRotation = { x: 0, y: 0 };
+
+function goToFace(color){
+  if(color==="white") targetRotation = {x: Math.PI/2, y: 0};
+  if(color==="yellow") targetRotation = {x: -Math.PI/2, y: 0};
+  if(color==="green") targetRotation = {x: 0, y: 0};
+  if(color==="blue") targetRotation = {x: 0, y: Math.PI};
+  if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
+  if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
+}
+
+// 🔄 ROTATE LAYERS
 function rotateLayer(axis, value, dir){
   const group = new THREE.Group();
   scene.add(group);
@@ -119,7 +149,7 @@ function rotateLayer(axis, value, dir){
     } else {
       group.children.slice().forEach(c=>{
         c.applyMatrix4(group.matrix);
-        scene.add(c);
+        cubeGroup.add(c);
       });
       scene.remove(group);
     }
@@ -127,7 +157,7 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// MOVES
+// MOVE BUTTONS
 function turn(move){
   switch(move){
     case "R": rotateLayer("x",1,-1); break;
@@ -141,9 +171,14 @@ function turn(move){
   }
 }
 
-// LOOP
+// 🎬 LOOP
 function animate(){
   requestAnimationFrame(animate);
+
+  // smooth rotate to selected face
+  cubeGroup.rotation.x += (targetRotation.x - cubeGroup.rotation.x) * 0.1;
+  cubeGroup.rotation.y += (targetRotation.y - cubeGroup.rotation.y) * 0.1;
+
   renderer.render(scene,camera);
 }
 animate();
