@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Stable)</title>
+<title>Rubik's Cube (Drag Enabled)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -43,6 +43,7 @@
 <div id="controls">
   <button onclick="resetCube()">SOLVE</button>
   <button onclick="scrambleCube()">SCRAMBLE</button>
+  <button onclick="toggleDrag()">DRAG MODE</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -67,6 +68,11 @@ scene.add(light);
 let cubeGroup;
 let cubes = [];
 let isTurning = false;
+
+// DRAG VARIABLES
+let dragMode = false;
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
 
 // COLORS
 const COLORS = {
@@ -126,7 +132,7 @@ function snapCube(){
   });
 }
 
-// ROTATE LAYER (FIXED)
+// ROTATE LAYER
 function rotateLayer(axis, value, dir){
   if(isTurning) return;
   isTurning = true;
@@ -158,7 +164,6 @@ function rotateLayer(axis, value, dir){
       });
 
       cubeGroup.remove(group);
-
       snapCube();
       isTurning = false;
     }
@@ -181,7 +186,7 @@ function turn(move){
   }
 }
 
-// ⚡ FASTER SCRAMBLE (ONLY CHANGE)
+// FAST SCRAMBLE
 function scrambleCube(){
   const moves = ["R","R'","L","L'","U","U'","D","D'"];
   let i = 0;
@@ -196,7 +201,7 @@ function scrambleCube(){
       i++;
     }
 
-    setTimeout(step, 30); // ⚡ faster
+    setTimeout(step, 30);
   }
 
   step();
@@ -207,7 +212,7 @@ function resetCube(){
   buildCube();
 }
 
-// CAMERA
+// CAMERA SNAP ROTATION
 let targetRotation = { x: 0, y: 0 };
 
 function goToFace(color){
@@ -218,6 +223,35 @@ function goToFace(color){
   if(color==="red") targetRotation = {x: 0, y: -Math.PI/2};
   if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
 }
+
+// DRAG MODE
+function toggleDrag(){
+  dragMode = !dragMode;
+}
+
+document.addEventListener("mousedown", (e)=>{
+  if(!dragMode) return;
+  isDragging = true;
+  prevMouse.x = e.clientX;
+  prevMouse.y = e.clientY;
+});
+
+document.addEventListener("mouseup", ()=>{
+  isDragging = false;
+});
+
+document.addEventListener("mousemove", (e)=>{
+  if(!dragMode || !isDragging) return;
+
+  let dx = e.clientX - prevMouse.x;
+  let dy = e.clientY - prevMouse.y;
+
+  cubeGroup.rotation.y += dx * 0.01;
+  cubeGroup.rotation.x += dy * 0.01;
+
+  prevMouse.x = e.clientX;
+  prevMouse.y = e.clientY;
+});
 
 // LOOP
 function animate(){
