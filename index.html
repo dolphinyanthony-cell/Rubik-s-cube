@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Full Moves)</title>
+<title>Rubik's Cube (View-Based Moves)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -176,24 +176,37 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// MOVES (FULL)
+// 🔥 VIEW-BASED AXIS
+function getDynamicAxis(move){
+  const rot = cubeGroup.rotation;
+
+  let x = Math.round(Math.sin(rot.y));
+  let z = Math.round(Math.cos(rot.y));
+
+  if(move === "F" || move === "F'")
+    return z >= 0 ? {axis:"z", value:1} : {axis:"z", value:-1};
+
+  if(move === "B" || move === "B'")
+    return z >= 0 ? {axis:"z", value:-1} : {axis:"z", value:1};
+
+  if(move === "R" || move === "R'")
+    return x >= 0 ? {axis:"x", value:1} : {axis:"x", value:-1};
+
+  if(move === "L" || move === "L'")
+    return x >= 0 ? {axis:"x", value:-1} : {axis:"x", value:1};
+
+  if(move === "U" || move === "U'")
+    return {axis:"y", value:1};
+
+  if(move === "D" || move === "D'")
+    return {axis:"y", value:-1};
+}
+
+// MOVES
 function turn(move){
-  switch(move){
-    case "R": rotateLayer("x",1,-1); break;
-    case "R'": rotateLayer("x",1,1); break;
-    case "L": rotateLayer("x",-1,1); break;
-    case "L'": rotateLayer("x",-1,-1); break;
-
-    case "U": rotateLayer("y",1,-1); break;
-    case "U'": rotateLayer("y",1,1); break;
-    case "D": rotateLayer("y",-1,1); break;
-    case "D'": rotateLayer("y",-1,-1); break;
-
-    case "F": rotateLayer("z",1,-1); break;
-    case "F'": rotateLayer("z",1,1); break;
-    case "B": rotateLayer("z",-1,1); break;
-    case "B'": rotateLayer("z",-1,-1); break;
-  }
+  let dir = move.includes("'") ? 1 : -1;
+  let data = getDynamicAxis(move);
+  rotateLayer(data.axis, data.value, dir);
 }
 
 // SCRAMBLE
@@ -220,7 +233,7 @@ function resetCube(){
   buildCube();
 }
 
-// CAMERA
+// CAMERA SNAP
 let targetRotation = { x: 0, y: 0 };
 
 function goToFace(color){
@@ -232,7 +245,7 @@ function goToFace(color){
   if(color==="orange") targetRotation = {x: 0, y: Math.PI/2};
 }
 
-// DRAG MODE
+// DRAG
 function toggleDrag(){
   dragMode = !dragMode;
 
