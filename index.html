@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rubik's Cube (Drag Fixed)</title>
+<title>Rubik's Cube (Full Moves)</title>
 <style>
   body { margin: 0; overflow: hidden; background: black; }
 
@@ -38,6 +38,11 @@
   <button onclick="turn('U\'')">U'</button>
   <button onclick="turn('D')">D</button>
   <button onclick="turn('D\'')">D'</button>
+  <br>
+  <button onclick="turn('F')">F</button>
+  <button onclick="turn('F\'')">F'</button>
+  <button onclick="turn('B')">B</button>
+  <button onclick="turn('B\'')">B'</button>
 </div>
 
 <div id="controls">
@@ -171,23 +176,29 @@ function rotateLayer(axis, value, dir){
   anim();
 }
 
-// MOVES
+// MOVES (FULL)
 function turn(move){
   switch(move){
     case "R": rotateLayer("x",1,-1); break;
     case "R'": rotateLayer("x",1,1); break;
     case "L": rotateLayer("x",-1,1); break;
     case "L'": rotateLayer("x",-1,-1); break;
+
     case "U": rotateLayer("y",1,-1); break;
     case "U'": rotateLayer("y",1,1); break;
     case "D": rotateLayer("y",-1,1); break;
     case "D'": rotateLayer("y",-1,-1); break;
+
+    case "F": rotateLayer("z",1,-1); break;
+    case "F'": rotateLayer("z",1,1); break;
+    case "B": rotateLayer("z",-1,1); break;
+    case "B'": rotateLayer("z",-1,-1); break;
   }
 }
 
-// FAST SCRAMBLE
+// SCRAMBLE
 function scrambleCube(){
-  const moves = ["R","R'","L","L'","U","U'","D","D'"];
+  const moves = ["R","R'","L","L'","U","U'","D","D'","F","F'","B","B'"];
   let i = 0;
 
   function step(){
@@ -209,7 +220,7 @@ function resetCube(){
   buildCube();
 }
 
-// CAMERA SNAP
+// CAMERA
 let targetRotation = { x: 0, y: 0 };
 
 function goToFace(color){
