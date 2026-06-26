@@ -64,7 +64,6 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// LIGHT
 scene.add(new THREE.AmbientLight(0xffffff,0.7));
 const light = new THREE.PointLight(0xffffff,1.2);
 light.position.set(10,10,10);
@@ -76,13 +75,9 @@ scene.add(cubeGroup);
 let cubes = [];
 let isTurning = false;
 
-// DRAG MODE
 let dragMode = false;
 let isDragging = false;
-let prev = {x:0,y:0};
-
-// ORIENTATION
-let orientation = {
+let prev = {x:0,y:0};let orientation = {
   x: new THREE.Vector3(1,0,0),
   y: new THREE.Vector3(0,1,0),
   z: new THREE.Vector3(0,0,1)
@@ -100,14 +95,17 @@ function buildCube(){
         const materials = [
           new THREE.MeshStandardMaterial({color:x===1?0xff0000:0x111111}),
           new THREE.MeshStandardMaterial({color:x===-1?0xff8000:0x111111}),
-          // 🔥 SWAPPED WHITE/YELLOW
           new THREE.MeshStandardMaterial({color:y===1?0xffff00:0x111111}),
           new THREE.MeshStandardMaterial({color:y===-1?0xffffff:0x111111}),
           new THREE.MeshStandardMaterial({color:z===1?0x00ff00:0x111111}),
           new THREE.MeshStandardMaterial({color:z===-1?0x0000ff:0x111111})
         ];
 
-        const cube = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), materials);
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9,0.9,0.9),
+          materials
+        );
+
         cube.position.set(x*1.05,y*1.05,z*1.05);
 
         cubeGroup.add(cube);
@@ -140,23 +138,23 @@ function rotateLayer(axisVec, layerValue, dir){
     steps++;
     group.rotateOnAxis(axisVec, angle/20);
 
-    if(steps<20){
+    if(steps < 20){
       requestAnimationFrame(anim);
     } else {
       group.updateMatrixWorld();
+
       group.children.slice().forEach(c=>{
         c.applyMatrix4(group.matrix);
         cubeGroup.add(c);
       });
+
       cubeGroup.remove(group);
       isTurning = false;
     }
   }
-  anim();
-}
 
-// MOVES
-function turn(move){
+  anim();
+}function turn(move){
   let dir = move.includes("'") ? 1 : -1;
 
   switch(move[0]){
@@ -182,6 +180,7 @@ function scrambleCube(){
     }
     setTimeout(step,30);
   }
+
   step();
 }
 
@@ -190,7 +189,7 @@ function resetCube(){
   buildCube();
 }
 
-// 🔥 UPDATED COLOR CAMERA (SWAPPED)
+// COLOR CAMERA
 function goToFace(color){
   if(color==="white") cubeGroup.rotation.set(Math.PI/2,0,0);
   if(color==="yellow") cubeGroup.rotation.set(-Math.PI/2,0,0);
@@ -200,9 +199,7 @@ function goToFace(color){
   if(color==="orange") cubeGroup.rotation.set(0,Math.PI/2,0);
 
   updateOrientation();
-}
-
-// UPDATE ORIENTATION
+}// UPDATE ORIENTATION
 function updateOrientation(){
   const m = new THREE.Matrix4().extractRotation(cubeGroup.matrix);
   orientation.x.set(1,0,0).applyMatrix4(m).round();
@@ -210,12 +207,52 @@ function updateOrientation(){
   orientation.z.set(0,0,1).applyMatrix4(m).round();
 }
 
-// DRAG MODE
-function toggleDrag(){
-  dragMode = !dragMode;
+// 🔥 NEW: LOCK CLOSEST FACE WHEN DRAG MODE IS ENABLED
+function lockClosestFace(){
+
+  let view = new THREE.Vector3();
+  camera.getWorldDirection(view);
+
+  let faces = [
+    {name:"front", vec:new THREE.Vector3(0,0,1)},
+    {name:"back", vec:new THREE.Vector3(0,0,-1)},
+    {name:"right", vec:new THREE.Vector3(1,0,0)},
+    {name:"left", vec:new THREE.Vector3(-1,0,0)},
+    {name:"top", vec:new THREE.Vector3(0,1,0)},
+    {name:"bottom", vec:new THREE.Vector3(0,-1,0)}
+  ];
+
+  let closest = faces[0];
+  let best = -Infinity;
+
+  faces.forEach(f=>{
+    let score = f.vec.dot(view);
+    if(score > best){
+      best = score;
+      closest = f;
+    }
+  });
+
+  if(closest.name==="front") cubeGroup.rotation.set(0,0,0);
+  if(closest.name==="back") cubeGroup.rotation.set(0,Math.PI,0);
+  if(closest.name==="right") cubeGroup.rotation.set(0,-Math.PI/2,0);
+  if(closest.name==="left") cubeGroup.rotation.set(0,Math.PI/2,0);
+  if(closest.name==="top") cubeGroup.rotation.set(-Math.PI/2,0,0);
+  if(closest.name==="bottom") cubeGroup.rotation.set(Math.PI/2,0,0);
+
+  updateOrientation();
 }
 
-// MOUSE
+// DRAG MODE TOGGLE (UPDATED)
+function toggleDrag(){
+  dragMode = !dragMode;
+
+  if(dragMode){
+    lockClosestFace();
+  }
+}
+
+// MOUSE DRAG CONTROLS
 document.addEventListener("mousedown",e=>{
   if(!dragMode) return;
   isDragging=true;
