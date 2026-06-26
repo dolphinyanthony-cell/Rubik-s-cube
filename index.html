@@ -157,14 +157,36 @@ function rotateLayer(axisVec, layerValue, dir){
 }function turn(move){
   let dir = move.includes("'") ? -1 : 1;
 
+  // Use CURRENT orientation vectors (this is the key fix)
+  let axis;
+
   switch(move[0]){
-    case "R": rotateLayer(orientation.x, 1, dir); break;
-    case "L": rotateLayer(orientation.x, -1, -dir); break;
-    case "U": rotateLayer(orientation.y, 1, dir); break;
-    case "D": rotateLayer(orientation.y, -1, -dir); break;
-    case "F": rotateLayer(orientation.z, 1, dir); break;
-    case "B": rotateLayer(orientation.z, -1, -dir); break;
+    case "R":
+      axis = orientation.x.clone();
+      break;
+
+    case "L":
+      axis = orientation.x.clone().negate();
+      break;
+
+    case "U":
+      axis = orientation.y.clone();
+      break;
+
+    case "D":
+      axis = orientation.y.clone().negate();
+      break;
+
+    case "F":
+      axis = orientation.z.clone();
+      break;
+
+    case "B":
+      axis = orientation.z.clone().negate();
+      break;
   }
+
+  rotateLayer(axis, 1, dir);
 }
 // SCRAMBLE
 function scrambleCube(){
